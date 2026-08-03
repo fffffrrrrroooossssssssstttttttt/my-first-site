@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Повар-ИИ: Мега-Кухня</title>
+    <style>
+        body { font-family: system-ui, -apple-system, sans-serif; background-color: #f5f7fb; color: #2c3e50; margin: 0; padding: 15px; display: flex; justify-content: center; }
+        .app-card { background: white; padding: 25px; border-radius: 16px; box-shadow: 0 10px 25px rgba(0,0,0,0.05); max-width: 450px; width: 100%; border: 1px solid #eef2f5; }
+        h1 { font-size: 26px; color: #ff4757; text-align: center; margin-top: 0; display: flex; align-items: center; justify-content: center; gap: 8px; }
+        p { text-align: center; color: #7f8c8d; font-size: 14px; margin-bottom: 20px; }
+        .input-box { display: flex; gap: 8px; margin-bottom: 15px; }
+        input { flex: 1; padding: 14px; border: 2px solid #e2e8f0; border-radius: 10px; font-size: 16px; outline: none; transition: 0.2s; }
+        input:focus { border-color: #ff4757; }
+        .btn-add { background: #ff4757; color: white; border: none; padding: 0 20px; border-radius: 10px; font-size: 16px; font-weight: bold; cursor: pointer; }
+        .tags-zone { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 20px; min-height: 30px; }
+        .tag { background: #ffeaa7; color: #d63031; padding: 6px 14px; border-radius: 20px; font-size: 14px; font-weight: 600; display: flex; align-items: center; gap: 6px; }
+        .tag span { cursor: pointer; color: #b2bec3; font-size: 16px; }
+        .tag span:hover { color: #d63031; }
+        .btn-search { width: 100%; background: #1e90ff; color: white; border: none; padding: 14px; border-radius: 10px; font-size: 16px; font-weight: bold; cursor: pointer; box-shadow: 0 4px 12px rgba(30,144,255,0.2); }
+        .recipe-card { background: #fdfefe; border-left: 5px solid #ff4757; padding: 15px; border-radius: 8px; margin-top: 15px; box-shadow: 0 2px 8px rgba(0,0,0,0.05); }
+        .recipe-card h3 { margin: 0 0 8px 0; color: #2c3e50; font-size: 18px; }
+        .recipe-card p { text-align: left; margin: 4px 0; font-size: 14px; color: #34495e; }
+        .recipe-card .needed { font-size: 12px; color: #7f8c8d; font-weight: bold; text-transform: uppercase; margin-bottom: 6px; }
+    </style>
+</head>
+<body>
+
+<div class="app-card">
+    <h1>🍕 Мега Повар-ИИ</h1>
+    <p>Добавляйте продукты (мука, сахар, шоколад, сыр, томаты, картошка, мясо, лук) — сайт работает автономно!</p>
+    
+    <div class="input-box">
+        <input type="text" id="ingredient-input" placeholder="мука, сахар, томаты, сыр...">
+        <button class="btn-add" onclick="addIngredient()">+</button>
+    </div>
+
+    <div class="tags-zone" id="ingredients-tags"></div>
+
+    <button class="btn-search" onclick="findRecipes()">🚀 Найти десерты и пиццу</button>
+
+    <div id="recipes-result"></div>
+</div>
+
+<script>
+    const recipeDatabase = [
+        { name: "Итальянская Пицца Маргарита", ingredients: ["мука", "сыр", "томаты"], text: "Замесите тесто из муки и воды. Раскатайте круг. Смажьте измельченными томатами, сверху обильно посыпьте натертым сыром. Запекайте в духовке 15 минут при высокой температуре." },
+        { name: "Шоколадный Торт в кружке", ingredients: ["мука", "сахар", "яйцо", "шоколад"], text: "В большой кружке смешайте 3 ложки муки, 2 ложки сахара. Разбейте туда яйцо, добавьте растопленный шоколад. Тщательно перемешайте и поставьте в микроволновку на 3 минуты." },
+        { name: "Домашнее Печенье", ingredients: ["мука", "сахар", "масло"], text: "Смешайте размягченное масло с сахаром. Постепенно всыпьте муку и замесите плотное тесто. Сформируйте печенье и выпекайте в духовке 12-15 минут." },
+        { name: "Праздничный Бисквит", ingredients: ["мука", "сахар", "яйцо"], text: "Взбейте яйца с сахаром в пышную густую пену. Аккуратно лопаткой вмешайте муку. Перелейте в форму и запекайте 25 минут." },
+        { name: "Сытный ужин (Мясо с картошкой)", ingredients: ["мясо", "картошка", "лук", "масло"], text: "Нарежьте мясо кусочками и обжаривайте на масле 15 минут. Добавьте картофель и лук, посолите, накройте крышкой и тушите до мягкости картофеля." },
+        { name: "Жареная картошечка", ingredients: ["картошка", "лук", "масло"], text: "Нарежьте картофель. На раскаленную сковороду с маслом выложите картошку. Жарьте 15 минут, добавьте лук и соль." }
+    ];
+
+    let currentIngredients = [];
+
+    function addIngredient() {
+        const input = document.getElementById('ingredient-input');
+        const value = input.value.trim().toLowerCase();
+        if (value && !currentIngredients.includes(value)) {
+            currentIngredients.push(value);
+            renderTags();
+        }
+        input.value = '';
+        input.focus();
+    }
+
+    function removeIngredient(index) {
+        currentIngredients.splice(index, 1);
+        renderTags();
+    }
+
+    function renderTags() {
+        const container = document.getElementById('ingredients-tags');
+        container.innerHTML = currentIngredients.map((ing, index) => 
+            `<div class="tag">${ing} <span onclick="removeIngredient(${index})">×</span></div>`
+        ).join('');
+    }
+
+    function findRecipes() {
+        const resultContainer = document.getElementById('recipes-result');
+        resultContainer.innerHTML = '';
+        if (currentIngredients.length === 0) {
+            resultContainer.innerHTML = '<p style="color: #d63031; font-weight: bold; text-align: center;">Добавьте хотя бы один продукт!</p>';
+            return;
+        }
+        const matched = recipeDatabase.filter(recipe => 
+            recipe.ingredients.every(ing => currentIngredients.includes(ing))
+        );
+        if (matched.length === 0) {
+            resultContainer.innerHTML = '<p style="text-align: center; color: #7f8c8d;">Из этого набора пока нельзя приготовить целое блюдо. Попробуйте ввести основы: мука, сахар, сыр, томаты, масло, яйцо, картошка.</p>';
+            return;
+        }
+        matched.forEach(recipe => {
+            const div = document.createElement('div');
+            div.className = 'recipe-card';
+            div.innerHTML = `
+                <h3>✨ ${recipe.name}</h3>
+                <div class="needed">Нужно: ${recipe.ingredients.join(', ')}</div>
+                <p><strong>Инструкция:</strong> ${recipe.text}</p>
+            `;
+            resultContainer.appendChild(div);
+        });
+    }
+
+    document.getElementById('ingredient-input').addEventListener('keypress', function (e) {
+        if (e.key === 'Enter') {
+            addIngredient();
+        }
+    });
+</script>
+
+</body>
+</html>
